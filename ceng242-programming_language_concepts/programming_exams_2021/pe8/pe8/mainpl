@@ -1,0 +1,26 @@
+:- module(main, [sum_age/2, max_age_of_hobby/3, person_in_range/4]).
+:- [kb].
+
+% DO NOT CHANGE THE UPPER CONTENT, WRITE YOUR CODE AFTER THIS LINE
+
+sum_age([],0).
+sum_age([X|T],N) :- sum_age(T,Z), person(X,Age,_), N is Z+Age.
+
+
+max_age([], Acc, Acc,_).
+max_age([Name|RestList], Acc,Result,Hob):- person(Name,_,Hob2),Hob\= Hob2,
+    max_age(RestList, Acc, Result,Hob).
+max_age([Name|RestList], Acc, Result,Hob):- person(Name,Age,Hob), 
+    Age> Acc,
+    max_age(RestList, Age, Result,Hob).
+max_age([Name|RestList], Acc, Result,Hob):- person(Name,Age,Hob),
+    Age=< Acc,
+    max_age(RestList, Acc, Result,Hob).
+
+max_age_of_hobby(NameList , Hobby , MaxAge) :- max_age(NameList,0,MaxAge,Hobby).
+
+person_in_range([],_,_,[]).
+person_in_range([Name|RestList],Min,Max,[Name|Result]):- person(Name,X,_), X>=Min,Max>=X,
+    person_in_range(RestList,Min,Max,Result),!. 
+person_in_range([_|Tail],Min,Max,Result):-
+   person_in_range(Tail,Min,Max,Result),!.

@@ -1,0 +1,380 @@
+#######################################################################
+# Test for copying block of size 63;
+#######################################################################
+	.pos 0
+main:	irmovq Stack, %rsp  	# Set up stack pointer
+
+	# Set up arguments for copy function and then invoke it
+	irmovq $63, %rdx		# src and dst have 63 elements
+	irmovq dest, %rsi	# dst array
+	irmovq src, %rdi	# src array
+    # corrupt all the unused registers to prevent assumptions
+    irmovq $0x5710331, %rax
+    irmovq $0x5710331, %rbx
+    irmovq $0x5710331, %rcx
+    irmovq $0x5710331, %rbp
+    irmovq $0x5710331, %r8
+    irmovq $0x5710331, %r9
+    irmovq $0x5710331, %r10
+    irmovq $0x5710331, %r11
+    irmovq $0x5710331, %r12
+    irmovq $0x5710331, %r13
+    irmovq $0x5710331, %r14
+	call absrev		 
+	halt			# should halt with abs sum in %rax
+StartFun:
+absrev:
+    xorq %rax, %rax	# sum = 0;
+    xorq %rcx, %rcx # *dst_rev = 0
+    addq %rdx, %rcx 
+    addq %rcx, %rcx
+    addq %rcx, %rcx
+    addq %rcx, %rcx
+    addq %rsi, %rcx # *dst_rev = dst + len
+    irmovq $8, %r12
+    subq %r12, %rcx  # *dst_rev = dst + len - 1
+	subq  %r12, %rdx # if len < 6 go to M
+	jl     M     
+
+K:
+	mrmovq (%rdi), %r8     	# src[i] to %r8
+	mrmovq 8(%rdi), %r9    	# src[i+1] to %r9
+	rmmovq %r8, (%rcx)     	# src[i] to dst[len - 1]
+    andq   %r8, %r8       	# src[i] <= 0?
+    jle K1
+    addq %r8, %rax #sum +=src[i]
+    jmp K2
+K1:
+    subq %r8, %rax 
+K2:
+    rmmovq %r9, -8(%rcx) # src [i+1] to dst[len-2]
+    andq   %r9, %r9      # src [i+1] <= 0?
+    jle K4
+    addq %r9, %rax #sum +=src[i+1]
+    jmp K5
+K4:
+    subq %r9, %rax
+K5:
+    mrmovq 16(%rdi), %r8    # src[i+2] to %r8
+	mrmovq 24(%rdi), %r9    	# src[i+3] to %r9
+	rmmovq %r8, -16(%rcx)     	# src[i+2] to dst[len -3]
+    andq   %r8, %r8       	# src[i+2] <= 0?
+    jle K6
+    addq %r8, %rax #sum +=src[i+2]
+    jmp K7
+K6:
+    subq %r8, %rax
+K7:
+    rmmovq %r9, -24(%rcx) # src [i+3] to dst[len-4]
+    andq   %r9, %r9      # src [i+3] <= 0?
+    jle K8
+    addq %r9, %rax #sum +=src[i+3]
+    jmp K9
+K8:
+    subq %r9, %rax
+K9:
+    mrmovq 32(%rdi), %r8    # src[i+4] to %r8
+	mrmovq 40(%rdi), %r9   	# src[i+5] to %r9    
+	rmmovq %r8, -32(%rcx)   # src[i+4] to dst[len-5]
+    andq   %r8, %r8       	# src[i+4] <= 0?
+    jle K10
+    addq %r8, %rax #sum +=src[i+4]
+    jmp K11
+K10:
+    subq %r8, %rax 
+K11:
+    rmmovq %r9, -40(%rcx)   # src[i+5] to dst[len-6]
+    andq   %r9, %r9       	# src[i+4] <= 0?
+    jle K12
+    addq %r9, %rax #sum +=src[i+5]
+    jmp K13
+K12:
+    subq %r9, %rax     
+K13:
+    mrmovq 48(%rdi), %r8    # src[i+6] to %r8
+    mrmovq 56(%rdi), %r9   	# src[i+7] to %r9 
+	rmmovq %r8, -48(%rcx)   # src[i+6] to dst[len-7]
+    andq   %r8, %r8       	# src[i+6] <= 0?
+    jle K14
+    addq %r8, %rax #sum +=src[i+6]
+    jmp K15
+K14:
+    subq %r8, %rax 
+K15:
+    rmmovq %r9, -56(%rcx)   # src[i+7] to dst[len-8]
+    andq   %r9, %r9       	# src[i+7] <= 0?
+    jle K16
+    addq %r9, %rax #sum +=src[i+7]
+    jmp K17
+K16:
+    subq %r9, %rax     
+K17:
+#    irmovq $64, %r12 
+#    addq  %r12, %rdi  # src = src+6
+#    subq %r12, %rcx # dst = dst-6
+	leaq 64(%rdi), %rdi
+	leaq -64(%rcx),%rcx
+	irmovq $8, %r12
+	subq  %r12, %rdx # if len >= 6 go to K
+	jge K     
+
+
+
+M:
+	addq  %r12, %rdx #original len val
+	irmovq $1, %r12 
+	subq  %r12, %rdx #len--
+	jge M0 
+	ret #if len<= return
+M0:
+	mrmovq (%rdi), %r8     	# src[i] to %r8
+	mrmovq 8(%rdi), %r9    	# src[i+1] to %r9
+	rmmovq %r8, (%rcx)     	# src[i] to dst[len - 1]
+    andq   %r8, %r8       	# src[i] <= 0?
+    jle M1
+    addq %r8, %rax #sum +=src[i]
+    jmp M2
+M1:
+    subq %r8, %rax 
+M2:
+    subq  %r12, %rdx #len--
+	jge M3 
+	ret #if len<= return   
+M3:
+    rmmovq %r9, -8(%rcx) # src [i+1] to dst[len-2]
+    andq   %r9, %r9      # src [i+1] <= 0?
+    jle M4
+    addq %r9, %rax #sum +=src[i+1]
+    jmp M5
+M4:
+    subq %r9, %rax
+M5:
+    subq  %r12, %rdx #len--
+	jge M6 
+	ret #if len<= return   
+M6:
+    mrmovq 16(%rdi), %r8    # src[i+2] to %r8
+	mrmovq 24(%rdi), %r9    	# src[i+3] to %r9
+	rmmovq %r8, -16(%rcx)     	# src[i+2] to dst[len -3]
+    andq   %r8, %r8       	# src[i+2] <= 0?
+    jle M7
+    addq %r8, %rax #sum +=src[i+2]
+    jmp M8
+M7:
+    subq %r8, %rax
+M8:
+    subq  %r12, %rdx #len--
+	jge M9 
+	ret #if len<= return   
+M9:
+    rmmovq %r9, -24(%rcx) # src [i+3] to dst[len-4]
+    andq   %r9, %r9      # src [i+3] <= 0?
+    jle M10
+    addq %r9, %rax #sum +=src[i+3]
+    jmp M11
+M10:
+    subq %r9, %rax
+M11:
+    subq  %r12, %rdx #len--
+	jge M12 
+	ret #if len<= return 
+M12:
+    mrmovq 32(%rdi), %r8    # src[i+4] to %r8
+    mrmovq 40(%rdi), %r9    # src[i+5] to %r9
+	rmmovq %r8, -32(%rcx)   # src[i+4] to dst[len-5]
+    andq   %r8, %r8       	# src[i+4] <= 0?
+    jle M13
+    addq %r8, %rax #sum +=src[i+4]
+    jmp M14
+M13:
+    subq %r8, %rax 
+M14:
+    subq  %r12, %rdx #len--
+	jge M15 
+	ret #if len<= return   
+M15:
+    rmmovq %r9, -40(%rcx) # src [i+5] to dst[len-6]
+    andq   %r9, %r9      # src [i+5] <= 0?
+    jle M16
+    addq %r9, %rax #sum +=src[i+5]
+    jmp M17
+M16:
+    subq %r9, %rax
+M17:
+    subq  %r12, %rdx #len--
+	jge M18
+	ret #if len<= return   
+M18:
+    mrmovq 48(%rdi), %r8    # src[i+6] to %r8
+	rmmovq %r8, -48(%rcx)   # src[i+6] to dst[len-7]
+    andq   %r8, %r8       	# src[i+6] <= 0?
+    jle M19
+    addq %r8, %rax #sum +=src[i+6]
+    jmp M20
+M19:
+    subq %r8, %rax 
+M20:
+    ret
+
+EndFun:
+
+###############################
+# Source and destination blocks 
+###############################
+	.align 8
+src:
+	.quad 1
+	.quad -2
+	.quad 3
+	.quad 4
+	.quad 5
+	.quad 6
+	.quad 7
+	.quad 8
+	.quad -9
+	.quad -10
+	.quad -11
+	.quad -12
+	.quad 13
+	.quad -14
+	.quad 15
+	.quad -16
+	.quad -17
+	.quad 18
+	.quad -19
+	.quad -20
+	.quad 21
+	.quad -22
+	.quad -23
+	.quad -24
+	.quad 25
+	.quad -26
+	.quad 27
+	.quad 28
+	.quad -29
+	.quad -30
+	.quad 31
+	.quad 32
+	.quad -33
+	.quad 34
+	.quad -35
+	.quad 36
+	.quad 37
+	.quad -38
+	.quad 39
+	.quad 40
+	.quad 41
+	.quad -42
+	.quad 43
+	.quad -44
+	.quad 45
+	.quad -46
+	.quad -47
+	.quad -48
+	.quad 49
+	.quad 50
+	.quad 51
+	.quad 52
+	.quad -53
+	.quad -54
+	.quad -55
+	.quad -56
+	.quad 57
+	.quad -58
+	.quad 59
+	.quad -60
+	.quad -61
+	.quad -62
+	.quad 63
+	.quad 0xbcdefa # This shouldn't get moved
+
+	.align 16
+Predest:
+	.quad 0xbcdefa
+dest:
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+Postdest:
+	.quad 0xdefabc
+
+.align 8
+# Run time stack
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+
+Stack:

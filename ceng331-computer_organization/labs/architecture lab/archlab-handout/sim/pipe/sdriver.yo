@@ -1,0 +1,262 @@
+                            | #######################################################################
+                            | # Test for copying block of size 4;
+                            | #######################################################################
+0x000:                      | 	.pos 0
+0x000: 30f4c004000000000000 | main:	irmovq Stack, %rsp  	# Set up stack pointer
+                            | 
+                            | 	# Set up arguments for copy function and then invoke it
+0x00a: 30f20400000000000000 | 	irmovq $4, %rdx		# src and dst have 4 elements
+0x014: 30f61804000000000000 | 	irmovq dest, %rsi	# dst array
+0x01e: 30f7e803000000000000 | 	irmovq src, %rdi	# src array
+                            |     # corrupt all the unused registers to prevent assumptions
+0x028: 30f03103710500000000 |     irmovq $0x5710331, %rax
+0x032: 30f33103710500000000 |     irmovq $0x5710331, %rbx
+0x03c: 30f13103710500000000 |     irmovq $0x5710331, %rcx
+0x046: 30f53103710500000000 |     irmovq $0x5710331, %rbp
+0x050: 30f83103710500000000 |     irmovq $0x5710331, %r8
+0x05a: 30f93103710500000000 |     irmovq $0x5710331, %r9
+0x064: 30fa3103710500000000 |     irmovq $0x5710331, %r10
+0x06e: 30fb3103710500000000 |     irmovq $0x5710331, %r11
+0x078: 30fc3103710500000000 |     irmovq $0x5710331, %r12
+0x082: 30fd3103710500000000 |     irmovq $0x5710331, %r13
+0x08c: 30fe3103710500000000 |     irmovq $0x5710331, %r14
+0x096: 80a000000000000000   | 	call absrev		 
+0x09f: 00                   | 	halt			# should halt with abs sum in %rax
+0x0a0:                      | StartFun:
+0x0a0:                      | absrev:
+0x0a0: 6300                 |     xorq %rax, %rax	# sum = 0;
+0x0a2: 6311                 |     xorq %rcx, %rcx # *dst_rev = 0
+0x0a4: 6021                 |     addq %rdx, %rcx 
+0x0a6: 6011                 |     addq %rcx, %rcx
+0x0a8: 6011                 |     addq %rcx, %rcx
+0x0aa: 6011                 |     addq %rcx, %rcx
+0x0ac: 6061                 |     addq %rsi, %rcx # *dst_rev = dst + len
+0x0ae: 30fc0800000000000000 |     irmovq $8, %r12
+0x0b8: 61c1                 |     subq %r12, %rcx  # *dst_rev = dst + len - 1
+0x0ba: 61c2                 | 	subq  %r12, %rdx # if len < 6 go to M
+0x0bc: 724e02000000000000   | 	jl     M     
+                            | 
+0x0c5:                      | K:
+0x0c5: 50870000000000000000 | 	mrmovq (%rdi), %r8     	# src[i] to %r8
+0x0cf: 50970800000000000000 | 	mrmovq 8(%rdi), %r9    	# src[i+1] to %r9
+0x0d9: 40810000000000000000 | 	rmmovq %r8, (%rcx)     	# src[i] to dst[len - 1]
+0x0e3: 6288                 |     andq   %r8, %r8       	# src[i] <= 0?
+0x0e5: 71f900000000000000   |     jle K1
+0x0ee: 6080                 |     addq %r8, %rax #sum +=src[i]
+0x0f0: 70fb00000000000000   |     jmp K2
+0x0f9:                      | K1:
+0x0f9: 6180                 |     subq %r8, %rax 
+0x0fb:                      | K2:
+0x0fb: 4091f8ffffffffffffff |     rmmovq %r9, -8(%rcx) # src [i+1] to dst[len-2]
+0x105: 6299                 |     andq   %r9, %r9      # src [i+1] <= 0?
+0x107: 711b01000000000000   |     jle K4
+0x110: 6090                 |     addq %r9, %rax #sum +=src[i+1]
+0x112: 701d01000000000000   |     jmp K5
+0x11b:                      | K4:
+0x11b: 6190                 |     subq %r9, %rax
+0x11d:                      | K5:
+0x11d: 50871000000000000000 |     mrmovq 16(%rdi), %r8    # src[i+2] to %r8
+0x127: 50971800000000000000 | 	mrmovq 24(%rdi), %r9    	# src[i+3] to %r9
+0x131: 4081f0ffffffffffffff | 	rmmovq %r8, -16(%rcx)     	# src[i+2] to dst[len -3]
+0x13b: 6288                 |     andq   %r8, %r8       	# src[i+2] <= 0?
+0x13d: 715101000000000000   |     jle K6
+0x146: 6080                 |     addq %r8, %rax #sum +=src[i+2]
+0x148: 705301000000000000   |     jmp K7
+0x151:                      | K6:
+0x151: 6180                 |     subq %r8, %rax
+0x153:                      | K7:
+0x153: 4091e8ffffffffffffff |     rmmovq %r9, -24(%rcx) # src [i+3] to dst[len-4]
+0x15d: 6299                 |     andq   %r9, %r9      # src [i+3] <= 0?
+0x15f: 717301000000000000   |     jle K8
+0x168: 6090                 |     addq %r9, %rax #sum +=src[i+3]
+0x16a: 707501000000000000   |     jmp K9
+0x173:                      | K8:
+0x173: 6190                 |     subq %r9, %rax
+0x175:                      | K9:
+0x175: 50872000000000000000 |     mrmovq 32(%rdi), %r8    # src[i+4] to %r8
+0x17f: 50972800000000000000 | 	mrmovq 40(%rdi), %r9   	# src[i+5] to %r9    
+0x189: 4081e0ffffffffffffff | 	rmmovq %r8, -32(%rcx)   # src[i+4] to dst[len-5]
+0x193: 6288                 |     andq   %r8, %r8       	# src[i+4] <= 0?
+0x195: 71a901000000000000   |     jle K10
+0x19e: 6080                 |     addq %r8, %rax #sum +=src[i+4]
+0x1a0: 70ab01000000000000   |     jmp K11
+0x1a9:                      | K10:
+0x1a9: 6180                 |     subq %r8, %rax 
+0x1ab:                      | K11:
+0x1ab: 4091d8ffffffffffffff |     rmmovq %r9, -40(%rcx)   # src[i+5] to dst[len-6]
+0x1b5: 6299                 |     andq   %r9, %r9       	# src[i+4] <= 0?
+0x1b7: 71cb01000000000000   |     jle K12
+0x1c0: 6090                 |     addq %r9, %rax #sum +=src[i+5]
+0x1c2: 70cd01000000000000   |     jmp K13
+0x1cb:                      | K12:
+0x1cb: 6190                 |     subq %r9, %rax     
+0x1cd:                      | K13:
+0x1cd: 50873000000000000000 |     mrmovq 48(%rdi), %r8    # src[i+6] to %r8
+0x1d7: 50973800000000000000 |     mrmovq 56(%rdi), %r9   	# src[i+7] to %r9 
+0x1e1: 4081d0ffffffffffffff | 	rmmovq %r8, -48(%rcx)   # src[i+6] to dst[len-7]
+0x1eb: 6288                 |     andq   %r8, %r8       	# src[i+6] <= 0?
+0x1ed: 710102000000000000   |     jle K14
+0x1f6: 6080                 |     addq %r8, %rax #sum +=src[i+6]
+0x1f8: 700302000000000000   |     jmp K15
+0x201:                      | K14:
+0x201: 6180                 |     subq %r8, %rax 
+0x203:                      | K15:
+0x203: 4091c8ffffffffffffff |     rmmovq %r9, -56(%rcx)   # src[i+7] to dst[len-8]
+0x20d: 6299                 |     andq   %r9, %r9       	# src[i+7] <= 0?
+0x20f: 712302000000000000   |     jle K16
+0x218: 6090                 |     addq %r9, %rax #sum +=src[i+7]
+0x21a: 702502000000000000   |     jmp K17
+0x223:                      | K16:
+0x223: 6190                 |     subq %r9, %rax     
+0x225:                      | K17:
+                            | #    irmovq $64, %r12 
+                            | #    addq  %r12, %rdi  # src = src+6
+                            | #    subq %r12, %rcx # dst = dst-6
+0x225: d0774000000000000000 | 	leaq 64(%rdi), %rdi
+0x22f: d011c0ffffffffffffff | 	leaq -64(%rcx),%rcx
+0x239: 30fc0800000000000000 | 	irmovq $8, %r12
+0x243: 61c2                 | 	subq  %r12, %rdx # if len >= 6 go to K
+0x245: 75c500000000000000   | 	jge K     
+                            | 
+                            | 
+                            | 
+0x24e:                      | M:
+0x24e: 60c2                 | 	addq  %r12, %rdx #original len val
+0x250: 30fc0100000000000000 | 	irmovq $1, %r12 
+0x25a: 61c2                 | 	subq  %r12, %rdx #len--
+0x25c: 756602000000000000   | 	jge M0 
+0x265: 90                   | 	ret #if len<= return
+0x266:                      | M0:
+0x266: 50870000000000000000 | 	mrmovq (%rdi), %r8     	# src[i] to %r8
+0x270: 50970800000000000000 | 	mrmovq 8(%rdi), %r9    	# src[i+1] to %r9
+0x27a: 40810000000000000000 | 	rmmovq %r8, (%rcx)     	# src[i] to dst[len - 1]
+0x284: 6288                 |     andq   %r8, %r8       	# src[i] <= 0?
+0x286: 719a02000000000000   |     jle M1
+0x28f: 6080                 |     addq %r8, %rax #sum +=src[i]
+0x291: 709c02000000000000   |     jmp M2
+0x29a:                      | M1:
+0x29a: 6180                 |     subq %r8, %rax 
+0x29c:                      | M2:
+0x29c: 61c2                 |     subq  %r12, %rdx #len--
+0x29e: 75a802000000000000   | 	jge M3 
+0x2a7: 90                   | 	ret #if len<= return   
+0x2a8:                      | M3:
+0x2a8: 4091f8ffffffffffffff |     rmmovq %r9, -8(%rcx) # src [i+1] to dst[len-2]
+0x2b2: 6299                 |     andq   %r9, %r9      # src [i+1] <= 0?
+0x2b4: 71c802000000000000   |     jle M4
+0x2bd: 6090                 |     addq %r9, %rax #sum +=src[i+1]
+0x2bf: 70ca02000000000000   |     jmp M5
+0x2c8:                      | M4:
+0x2c8: 6190                 |     subq %r9, %rax
+0x2ca:                      | M5:
+0x2ca: 61c2                 |     subq  %r12, %rdx #len--
+0x2cc: 75d602000000000000   | 	jge M6 
+0x2d5: 90                   | 	ret #if len<= return   
+0x2d6:                      | M6:
+0x2d6: 50871000000000000000 |     mrmovq 16(%rdi), %r8    # src[i+2] to %r8
+0x2e0: 50971800000000000000 | 	mrmovq 24(%rdi), %r9    	# src[i+3] to %r9
+0x2ea: 4081f0ffffffffffffff | 	rmmovq %r8, -16(%rcx)     	# src[i+2] to dst[len -3]
+0x2f4: 6288                 |     andq   %r8, %r8       	# src[i+2] <= 0?
+0x2f6: 710a03000000000000   |     jle M7
+0x2ff: 6080                 |     addq %r8, %rax #sum +=src[i+2]
+0x301: 700c03000000000000   |     jmp M8
+0x30a:                      | M7:
+0x30a: 6180                 |     subq %r8, %rax
+0x30c:                      | M8:
+0x30c: 61c2                 |     subq  %r12, %rdx #len--
+0x30e: 751803000000000000   | 	jge M9 
+0x317: 90                   | 	ret #if len<= return   
+0x318:                      | M9:
+0x318: 4091e8ffffffffffffff |     rmmovq %r9, -24(%rcx) # src [i+3] to dst[len-4]
+0x322: 6299                 |     andq   %r9, %r9      # src [i+3] <= 0?
+0x324: 713803000000000000   |     jle M10
+0x32d: 6090                 |     addq %r9, %rax #sum +=src[i+3]
+0x32f: 703a03000000000000   |     jmp M11
+0x338:                      | M10:
+0x338: 6190                 |     subq %r9, %rax
+0x33a:                      | M11:
+0x33a: 61c2                 |     subq  %r12, %rdx #len--
+0x33c: 754603000000000000   | 	jge M12 
+0x345: 90                   | 	ret #if len<= return 
+0x346:                      | M12:
+0x346: 50872000000000000000 |     mrmovq 32(%rdi), %r8    # src[i+4] to %r8
+0x350: 50972800000000000000 |     mrmovq 40(%rdi), %r9    # src[i+5] to %r9
+0x35a: 4081e0ffffffffffffff | 	rmmovq %r8, -32(%rcx)   # src[i+4] to dst[len-5]
+0x364: 6288                 |     andq   %r8, %r8       	# src[i+4] <= 0?
+0x366: 717a03000000000000   |     jle M13
+0x36f: 6080                 |     addq %r8, %rax #sum +=src[i+4]
+0x371: 707c03000000000000   |     jmp M14
+0x37a:                      | M13:
+0x37a: 6180                 |     subq %r8, %rax 
+0x37c:                      | M14:
+0x37c: 61c2                 |     subq  %r12, %rdx #len--
+0x37e: 758803000000000000   | 	jge M15 
+0x387: 90                   | 	ret #if len<= return   
+0x388:                      | M15:
+0x388: 4091d8ffffffffffffff |     rmmovq %r9, -40(%rcx) # src [i+5] to dst[len-6]
+0x392: 6299                 |     andq   %r9, %r9      # src [i+5] <= 0?
+0x394: 71a803000000000000   |     jle M16
+0x39d: 6090                 |     addq %r9, %rax #sum +=src[i+5]
+0x39f: 70aa03000000000000   |     jmp M17
+0x3a8:                      | M16:
+0x3a8: 6190                 |     subq %r9, %rax
+0x3aa:                      | M17:
+0x3aa: 61c2                 |     subq  %r12, %rdx #len--
+0x3ac: 75b603000000000000   | 	jge M18
+0x3b5: 90                   | 	ret #if len<= return   
+0x3b6:                      | M18:
+0x3b6: 50873000000000000000 |     mrmovq 48(%rdi), %r8    # src[i+6] to %r8
+0x3c0: 4081d0ffffffffffffff | 	rmmovq %r8, -48(%rcx)   # src[i+6] to dst[len-7]
+0x3ca: 6288                 |     andq   %r8, %r8       	# src[i+6] <= 0?
+0x3cc: 71e003000000000000   |     jle M19
+0x3d5: 6080                 |     addq %r8, %rax #sum +=src[i+6]
+0x3d7: 70e203000000000000   |     jmp M20
+0x3e0:                      | M19:
+0x3e0: 6180                 |     subq %r8, %rax 
+0x3e2:                      | M20:
+0x3e2: 90                   |     ret
+                            | 
+0x3e3:                      | EndFun:
+                            | 
+                            | ###############################
+                            | # Source and destination blocks 
+                            | ###############################
+0x3e8:                      | 	.align 8
+0x3e8:                      | src:
+0x3e8: ffffffffffffffff     | 	.quad -1
+0x3f0: feffffffffffffff     | 	.quad -2
+0x3f8: 0300000000000000     | 	.quad 3
+0x400: 0400000000000000     | 	.quad 4
+0x408: fadebc0000000000     | 	.quad 0xbcdefa # This shouldn't get moved
+                            | 
+0x410:                      | 	.align 16
+0x410:                      | Predest:
+0x410: fadebc0000000000     | 	.quad 0xbcdefa
+0x418:                      | dest:
+0x418: abefcd0000000000     | 	.quad 0xcdefab
+0x420: abefcd0000000000     | 	.quad 0xcdefab
+0x428: abefcd0000000000     | 	.quad 0xcdefab
+0x430: abefcd0000000000     | 	.quad 0xcdefab
+0x438:                      | Postdest:
+0x438: bcfade0000000000     | 	.quad 0xdefabc
+                            | 
+0x440:                      | .align 8
+                            | # Run time stack
+0x440: 0000000000000000     | 	.quad 0
+0x448: 0000000000000000     | 	.quad 0
+0x450: 0000000000000000     | 	.quad 0
+0x458: 0000000000000000     | 	.quad 0
+0x460: 0000000000000000     | 	.quad 0
+0x468: 0000000000000000     | 	.quad 0
+0x470: 0000000000000000     | 	.quad 0
+0x478: 0000000000000000     | 	.quad 0
+0x480: 0000000000000000     | 	.quad 0
+0x488: 0000000000000000     | 	.quad 0
+0x490: 0000000000000000     | 	.quad 0
+0x498: 0000000000000000     | 	.quad 0
+0x4a0: 0000000000000000     | 	.quad 0
+0x4a8: 0000000000000000     | 	.quad 0
+0x4b0: 0000000000000000     | 	.quad 0
+0x4b8: 0000000000000000     | 	.quad 0
+                            | 
+0x4c0:                      | Stack:

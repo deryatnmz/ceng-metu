@@ -1,0 +1,78 @@
+name: example
+source code: |-
+  input: ''
+  blank: ' '
+  start state: start
+  table:
+    start:
+      0      : {write: 0, R: 0}
+      1      : {write: 1, R: 0}
+    0:
+      0      : {write: 0, R}
+      1      : {write: 1, R}
+      ' '    : {write: ' ', L: 1}
+    1:
+      1      : {write: a, R: 2}
+      0      : {write: b, R: 3}
+      ' '    : {write: ' ', R: 5}
+    2:
+      1      : {write: 1, R}
+      0      : {write: 0, R}
+      ' '    : {write: 1, L: 4}
+    3:
+      1      : {write: 1, R}
+      0      : {write: 0, R}
+      ' '    : {write: 0, L: 4}
+    4:
+      0      : {write: 0, L}
+      1      : {write: 1, L}
+      a      : {write: 1, L: 1}
+      b      : {write: 0, L: 1}
+    5:
+      0      : {write: 0, R}
+      1      : {write: 1, R}
+      ' '    : {write: ' ', L: halt}  
+    halt:
+positions:
+  '0': {x: 209.23, y: 156.33}
+  '1': {x: 375.27, y: 154.2}
+  '2': {x: 382.56, y: 331.05}
+  '3': {x: 609.26, y: 470.41}
+  '4': {x: 147.14, y: 289.4}
+  '5': {x: 500.82, y: 154.03}
+  start: {x: 87.57, y: 156.04}
+  halt: {x: 661.71, y: 158.85}
+editor contents: |-
+  input: '1011'
+  blank: ' '
+  start state: start
+  table:
+    start:
+      0      : {write: 0, R: 0}
+      1      : {write: 1, R: 0}
+    0:
+      0      : {write: 0, R}
+      1      : {write: 1, R}
+      ' '    : {write: ' ', L: 1}
+    1:
+      1      : {write: a, R: 2}
+      0      : {write: b, R: 3}
+      ' '    : {write: ' ', R: 5}
+    2:
+      1      : {write: 1, R}
+      0      : {write: 0, R}
+      ' '    : {write: 1, L: 4}
+    3:
+      1      : {write: 1, R}
+      0      : {write: 0, R}
+      ' '    : {write: 0, L: 4}
+    4:
+      0      : {write: 0, L}
+      1      : {write: 1, L}
+      a      : {write: 1, L: 1}
+      b      : {write: 0, L: 1}
+    5:
+      0      : {write: 0, R}
+      1      : {write: 1, R}
+      ' '    : {write: ' ', L: halt}  
+    halt:

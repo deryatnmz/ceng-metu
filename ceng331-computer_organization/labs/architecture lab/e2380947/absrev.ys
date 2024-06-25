@@ -1,0 +1,206 @@
+#/* $begin absrev-ys */
+##################################################################
+# absrev.ys - Reverse a src block of len words to dst.
+# Return the sum of absolute values of words contained in src.
+#
+# DERYA TINMAZ - 2380947
+# I used leaq instruction instead of using irmovq + addq instructions. I implemented additions using 8 groups using jump tables, I tried implement different sized groups, 8 was the optimum  among other groupings(6,7,9,10..) in terms of time so I implemented 8 grouping. My code basically does not go into loop if len is less than 8, if it is greater loop does the multiples of eight, and mod%8 handled by second part. By implementing this I did not have to increment src and decrement dst one by one, and with reordering of instructions and using jumps, I prevented redundant bubbles. Also, at the beginning I tried to reduce the number of instructions to get dst+len.
+##################################################################
+# Do not modify this portion
+# Function prologue.
+# %rdi = src, %rsi = dst, %rdx = len
+absrev:
+##################################################################
+    xorq %rax, %rax	# sum = 0;
+    irmovq $8, %r12
+    xorq %rcx, %rcx    # *dst_rev =0
+    addq %rdx, %rcx    #len
+    addq %rcx, %rcx    #2len
+    addq %rcx, %rcx    #4len
+    addq %rcx, %rcx    #8len
+    addq %rsi, %rcx # *dst_rev = dst + len
+    subq %r12, %rcx  # *dst_rev = dst + len - 1
+    subq  %r12, %rdx # if len < 8 go to M
+    jl     M     
+
+K:
+    mrmovq (%rdi), %r8     	# src[i] 
+    mrmovq 8(%rdi), %r9    	# src[i+1] 
+    rmmovq %r8, (%rcx)     	# src[i] -> dst[len - 1]
+    andq   %r8, %r8       	
+    jle K1
+    addq %r8, %rax #sum +=src[i]
+    jmp K2
+K1:
+    subq %r8, %rax 
+K2:
+    rmmovq %r9, -8(%rcx) # src [i+1] -> dst[len-2]
+    andq   %r9, %r9     
+    jle K4
+    addq %r9, %rax #sum +=src[i+1]
+    jmp K5
+K4:
+    subq %r9, %rax
+K5:
+    mrmovq 16(%rdi), %r8    # src[i+2]
+    mrmovq 24(%rdi), %r9    # src[i+3] 
+    rmmovq %r8, -16(%rcx)   # src[i+2] -> dst[len -3]
+    andq   %r8, %r8     
+    jle K6
+    addq %r8, %rax #sum +=src[i+2]
+    jmp K7
+K6:
+    subq %r8, %rax
+K7:
+    rmmovq %r9, -24(%rcx)  # src [i+3] -> dst[len-4]
+    andq   %r9, %r9       
+    jle K8
+    addq %r9, %rax #sum +=src[i+3]
+    jmp K9
+K8:
+    subq %r9, %rax
+K9:
+    mrmovq 32(%rdi), %r8        # src[i+4]
+    mrmovq 40(%rdi), %r9   	# src[i+5]    
+    rmmovq %r8, -32(%rcx)       # src[i+4] -> dst[len-5]
+    andq   %r8, %r8     
+    jle K10
+    addq %r8, %rax #sum +=src[i+4]
+    jmp K11
+K10:
+    subq %r8, %rax 
+K11:
+    rmmovq %r9, -40(%rcx)   # src[i+5] -> dst[len-6]
+    andq   %r9, %r9      
+    jle K12
+    addq %r9, %rax #sum +=src[i+5]
+    jmp K13
+K12:
+    subq %r9, %rax     
+K13:
+    mrmovq 48(%rdi), %r8    # src[i+6]
+    mrmovq 56(%rdi), %r9    # src[i+7] 
+    rmmovq %r8, -48(%rcx)   # src[i+6] -> dst[len-7]
+    andq   %r8, %r8 
+    jle K14
+    addq %r8, %rax #sum +=src[i+6]
+    jmp K15
+K14:
+    subq %r8, %rax 
+K15:
+    rmmovq %r9, -56(%rcx)   # src[i+7] -> dst[len-8]
+    andq   %r9, %r9      
+    jle K16
+    addq %r9, %rax #sum +=src[i+7]
+    jmp K17
+K16:
+    subq %r9, %rax     
+K17:
+    leaq 64(%rdi), %rdi
+    leaq -64(%rcx),%rcx
+    irmovq $8, %r12
+    subq  %r12, %rdx # if len >= 8 repeat K
+    jge K     
+M:
+    addq  %r12, %rdx #original len val
+    irmovq $1, %r12 
+    subq  %r12, %rdx #len--
+    jge M0 
+    ret #if len<= return
+M0:
+    mrmovq (%rdi), %r8     	# src[i] 
+    mrmovq 8(%rdi), %r9    	# src[i+1]
+    rmmovq %r8, (%rcx)     	# src[i] -> dst[len - 1]
+    andq   %r8, %r8      
+    jle M1
+    addq %r8, %rax #sum +=src[i]
+    jmp M2
+M1:
+    subq %r8, %rax 
+M2:
+    subq  %r12, %rdx #len--
+    jge M3 
+    ret #if len<= return   
+M3:
+    rmmovq %r9, -8(%rcx) # src [i+1] -> dst[len-2]
+    andq   %r9, %r9
+    jle M4
+    addq %r9, %rax #sum +=src[i+1]
+    jmp M5
+M4:
+    subq %r9, %rax
+M5:
+    subq  %r12, %rdx #len--
+    jge M6 
+    ret #if len<= return   
+M6:
+    mrmovq 16(%rdi), %r8        # src[i+2]
+    mrmovq 24(%rdi), %r9    	# src[i+3] 
+    rmmovq %r8, -16(%rcx)     	# src[i+2] -> dst[len -3]
+    andq   %r8, %r8       
+    jle M7
+    addq %r8, %rax #sum +=src[i+2]
+    jmp M8
+M7:
+    subq %r8, %rax
+M8:
+    subq  %r12, %rdx #len--
+    jge M9 
+    ret #if len<= return   
+M9:
+    rmmovq %r9, -24(%rcx)  # src[i+3] -> dst[len-4]
+    andq   %r9, %r9
+    jle M10
+    addq %r9, %rax #sum +=src[i+3]
+    jmp M11
+M10:
+    subq %r9, %rax
+M11:
+    subq  %r12, %rdx #len--
+    jge M12 
+    ret #if len<= return 
+M12:
+    mrmovq 32(%rdi), %r8    # src[i+4]
+    mrmovq 40(%rdi), %r9    # src[i+5]
+    rmmovq %r8, -32(%rcx)    # src[i+4] -> dst[len-5]
+    andq   %r8, %r8     
+    jle M13
+    addq %r8, %rax #sum +=src[i+4]
+    jmp M14
+M13:
+    subq %r8, %rax 
+M14:
+    subq  %r12, %rdx #len--
+    jge M15 
+    ret #if len<= return   
+M15:
+    rmmovq %r9, -40(%rcx)  # src [i+5] -> dst[len-6]
+    andq   %r9, %r9 
+    jle M16
+    addq %r9, %rax #sum +=src[i+5]
+    jmp M17
+M16:
+    subq %r9, %rax
+M17:
+    subq  %r12, %rdx #len--
+    jge M18
+    ret #if len<= return   
+M18:
+    mrmovq 48(%rdi), %r8    # src[i+6]
+    rmmovq %r8, -48(%rcx)   # src[i+6] -> dst[len-7]
+    andq   %r8, %r8     
+    jle M19
+    addq %r8, %rax #sum +=src[i+6]
+    ret
+M19:
+    subq %r8, %rax 
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+    ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end absrev-ys */
+
